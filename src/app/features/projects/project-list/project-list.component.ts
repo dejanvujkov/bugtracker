@@ -101,7 +101,7 @@ export class ProjectListComponent implements OnInit {
   }
 
   openCreate(): void {
-    const ref = this.dialog.open(ProjectCreateComponent, { width: '480px' });
+    const ref = this.dialog.open(ProjectCreateComponent, { width: '90vw', maxWidth: '560px' });
     ref.afterClosed().subscribe(result => {
       if (result) this.load();
     });

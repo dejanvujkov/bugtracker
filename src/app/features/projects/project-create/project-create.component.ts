@@ -21,11 +21,11 @@ import { MatSelectModule } from '@angular/material/select';
     <h2 mat-dialog-title>Create New Project</h2>
     <mat-dialog-content>
       <form #form="ngForm" class="create-form">
-        <mat-form-field appearance="outline" class="full-width">
+        <mat-form-field appearance="outline" class="full-width" floatLabel="always">
           <mat-label>Project Name</mat-label>
           <input matInput name="name" [(ngModel)]="name" required maxlength="100" placeholder="e.g. Alpha Backend">
         </mat-form-field>
-        <mat-form-field appearance="outline" class="full-width">
+        <mat-form-field appearance="outline" class="full-width" floatLabel="always">
           <mat-label>Description (optional)</mat-label>
           <textarea matInput name="desc" [(ngModel)]="description" rows="3" placeholder="What is this project about?"></textarea>
         </mat-form-field>
@@ -51,7 +51,7 @@ import { MatSelectModule } from '@angular/material/select';
     </mat-dialog-actions>
   `,
   styles: [`
-    .create-form { display: flex; flex-direction: column; gap: 4px; padding-top: 8px; min-width: 400px; }
+    .create-form { display: flex; flex-direction: column; gap: 20px; padding-top: 12px; width: 100%; }
     .full-width { width: 100%; }
     .error-msg { color: #d83b01; font-size: 13px; }
   `]

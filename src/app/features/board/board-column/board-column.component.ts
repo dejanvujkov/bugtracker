@@ -54,7 +54,8 @@ import { TaskCardComponent } from '../task-card/task-card.component';
       overflow: hidden;
     }
     .column-header {
-      padding: 12px 14px;
+      padding: 0 14px;
+      height: 52px;
       display: flex;
       align-items: center;
       justify-content: space-between;

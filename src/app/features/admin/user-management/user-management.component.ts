@@ -72,15 +72,15 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
       <div class="create-card">
         <h2>Create New User</h2>
         <div class="create-form">
-          <mat-form-field appearance="outline" class="full-width">
+          <mat-form-field appearance="outline" class="full-width" floatLabel="always">
             <mat-label>Full Name</mat-label>
             <input matInput [(ngModel)]="newName">
           </mat-form-field>
-          <mat-form-field appearance="outline" class="full-width">
+          <mat-form-field appearance="outline" class="full-width" floatLabel="always">
             <mat-label>Email</mat-label>
             <input matInput type="email" [(ngModel)]="newEmail">
           </mat-form-field>
-          <mat-form-field appearance="outline" class="full-width">
+          <mat-form-field appearance="outline" class="full-width" floatLabel="always">
             <mat-label>Password</mat-label>
             <input matInput type="password" [(ngModel)]="newPassword">
           </mat-form-field>

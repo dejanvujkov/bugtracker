@@ -39,11 +39,11 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
       <!-- Project Details -->
       <div class="settings-card">
         <h2>Details</h2>
-        <mat-form-field appearance="outline" class="full-width">
+        <mat-form-field appearance="outline" class="full-width" floatLabel="always">
           <mat-label>Project Name</mat-label>
           <input matInput [(ngModel)]="projectName">
         </mat-form-field>
-        <mat-form-field appearance="outline" class="full-width">
+        <mat-form-field appearance="outline" class="full-width" floatLabel="always">
           <mat-label>Description</mat-label>
           <textarea matInput [(ngModel)]="projectDesc" rows="3"></textarea>
         </mat-form-field>
@@ -117,15 +117,15 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
         <div class="settings-card">
           <h2>Create New User</h2>
           <div class="create-user-form">
-            <mat-form-field appearance="outline" class="full-width">
+            <mat-form-field appearance="outline" class="full-width" floatLabel="always">
               <mat-label>Full Name</mat-label>
               <input matInput [(ngModel)]="newUserName">
             </mat-form-field>
-            <mat-form-field appearance="outline" class="full-width">
+            <mat-form-field appearance="outline" class="full-width" floatLabel="always">
               <mat-label>Email</mat-label>
               <input matInput type="email" [(ngModel)]="newUserEmail">
             </mat-form-field>
-            <mat-form-field appearance="outline" class="full-width">
+            <mat-form-field appearance="outline" class="full-width" floatLabel="always">
               <mat-label>Password</mat-label>
               <input matInput type="password" [(ngModel)]="newUserPassword">
             </mat-form-field>

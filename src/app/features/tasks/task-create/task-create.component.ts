@@ -33,7 +33,7 @@ export interface TaskCreateData {
     <h2 mat-dialog-title>{{ data.defaultStatus === 'open' ? 'New Task' : 'New Task' }}</h2>
     <mat-dialog-content>
       <div class="form-grid">
-        <mat-form-field appearance="outline" class="full-width">
+        <mat-form-field appearance="outline" class="full-width" floatLabel="always">
           <mat-label>Title</mat-label>
           <input matInput [(ngModel)]="title" required placeholder="Short, descriptive title">
         </mat-form-field>
@@ -89,7 +89,7 @@ export interface TaskCreateData {
     </mat-dialog-actions>
   `,
   styles: [`
-    .form-grid { display: flex; flex-direction: column; gap: 8px; padding-top: 8px; min-width: 480px; }
+    .form-grid { display: flex; flex-direction: column; gap: 20px; padding-top: 8px; width: 100%; }
     .full-width { width: 100%; }
     .checkbox-row { padding: 4px 0; }
     .desc-label { font-size: 13px; color: #605e5c; margin-bottom: 4px; }

@@ -40,15 +40,10 @@ import { TaskCreateComponent } from '../../tasks/task-create/task-create.compone
           }
         </div>
         <div class="board-actions">
-          <mat-form-field appearance="outline" class="epic-filter">
-            <mat-label>Epic</mat-label>
-            <mat-select [(ngModel)]="epicFilter" (ngModelChange)="load()">
-              <mat-option value="">All Tasks</mat-option>
-              @for (e of epics(); track e.id) {
-                <mat-option [value]="e.id">{{ e.title }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
+          <div class="pill-toggle">
+            <button class="pill-option" [class.active]="viewMode === 'tasks'" (click)="viewMode = 'tasks'; cdr.markForCheck()">Tasks</button>
+            <button class="pill-option" [class.active]="viewMode === 'epics'" (click)="viewMode = 'epics'; cdr.markForCheck()">Epics</button>
+          </div>
 
           <a mat-button [routerLink]="['/projects', projectId, 'settings']" matTooltip="Settings">
             <mat-icon>settings</mat-icon> Settings
@@ -67,7 +62,7 @@ import { TaskCreateComponent } from '../../tasks/task-create/task-create.compone
           @for (col of columns; track col.status) {
             <app-board-column
               [status]="col.status"
-              [tasks]="boardData()[col.status]"
+              [tasks]="filteredBoardData[col.status]"
               [listId]="col.status + '-list'"
               [connectedLists]="['open-list', 'active-list', 'closed-list']"
               (dropped)="onDrop($event)"
@@ -93,7 +88,10 @@ import { TaskCreateComponent } from '../../tasks/task-create/task-create.compone
     .board-title { margin: 0; font-size: 22px; font-weight: 700; }
     .board-desc { color: #605e5c; font-size: 14px; }
     .board-actions { display: flex; align-items: center; gap: 8px; }
-    .epic-filter { width: 180px; }
+    .pill-toggle { display: flex; background: rgba(255,255,255,0.07); border-radius: 999px; padding: 3px; gap: 2px; }
+    .pill-option { border: none; background: transparent; color: rgba(255,255,255,0.5); border-radius: 999px; padding: 5px 18px; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.15s, color 0.15s; }
+    .pill-option.active { background: var(--color-primary); color: #fff; }
+    .pill-option:not(.active):hover { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.85); }
     .board-columns { display: flex; gap: 16px; align-items: flex-start; overflow-x: auto; padding-bottom: 16px; }
     .loading { text-align: center; padding: 64px; color: #605e5c; font-size: 16px; }
   `]
@@ -104,14 +102,24 @@ export class BoardComponent implements OnInit {
   private projectService = inject(ProjectService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
-  private cdr = inject(ChangeDetectorRef);
+  protected cdr = inject(ChangeDetectorRef);
 
   projectId = '';
   project = signal<Project | null>(null);
   epics = signal<Task[]>([]);
   boardData = signal<BoardData>({ open: [], active: [], closed: [] });
   loading = signal(true);
-  epicFilter = '';
+  viewMode: 'tasks' | 'epics' = 'tasks';
+
+  get filteredBoardData(): BoardData {
+    const data = this.boardData();
+    const isEpic = this.viewMode === 'epics';
+    return {
+      open:   data.open.filter(t => t.isEpic === isEpic),
+      active: data.active.filter(t => t.isEpic === isEpic),
+      closed: data.closed.filter(t => t.isEpic === isEpic),
+    };
+  }
 
   columns: { status: TaskStatus }[] = [
     { status: 'open' },
@@ -133,7 +141,7 @@ export class BoardComponent implements OnInit {
   async load(): Promise<void> {
     this.loading.set(true);
     try {
-      const data = await this.taskService.getBoardData(this.projectId, this.epicFilter || undefined);
+      const data = await this.taskService.getBoardData(this.projectId);
       this.boardData.set(data);
     } finally {
       this.loading.set(false);
@@ -142,7 +150,7 @@ export class BoardComponent implements OnInit {
 
   openCreate(status: TaskStatus = 'open'): void {
     const ref = this.dialog.open(TaskCreateComponent, {
-      width: '560px',
+      width: '90vw', maxWidth: '600px',
       data: { projectId: this.projectId, defaultStatus: status, epics: this.epics() }
     });
     ref.afterClosed().subscribe(created => {
