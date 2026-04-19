@@ -45,7 +45,7 @@ export class SqliteProjectRepository implements IProjectRepository {
   async create(dto: CreateProjectDTO): Promise<Project> {
     const now = new Date().toISOString();
     const id = dto.id || uuidv4();
-    this.driver.run(
+    await this.driver.run(
       `INSERT INTO projects (id, name, description, created_by, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [id, dto.name, dto.description ?? null, dto.createdBy, now, now]
@@ -57,7 +57,7 @@ export class SqliteProjectRepository implements IProjectRepository {
     const current = await this.findById(id);
     if (!current) return null;
     const now = new Date().toISOString();
-    this.driver.run(
+    await this.driver.run(
       `UPDATE projects SET name = ?, description = ?, updated_at = ? WHERE id = ?`,
       [dto.name ?? current.name, dto.description !== undefined ? dto.description : current.description, now, id]
     );
@@ -67,7 +67,7 @@ export class SqliteProjectRepository implements IProjectRepository {
   async delete(id: string): Promise<boolean> {
     const current = await this.findById(id);
     if (!current) return false;
-    this.driver.run(`DELETE FROM projects WHERE id = ?`, [id]);
+    await this.driver.run(`DELETE FROM projects WHERE id = ?`, [id]);
     return true;
   }
 }

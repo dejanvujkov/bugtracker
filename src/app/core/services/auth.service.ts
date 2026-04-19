@@ -3,11 +3,13 @@ import { Router } from '@angular/router';
 import * as bcrypt from 'bcryptjs';
 import { REPOS } from '../../database/repository-factory';
 import { User, UserRole } from '../models';
+import { NotificationService } from './notification.service';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private repos = inject(REPOS);
   private router = inject(Router);
+  private notifications = inject(NotificationService);
 
   private _currentUser = signal<User | null>(
     (() => {
@@ -39,17 +41,25 @@ export class AuthService {
     if (!user.isActive) throw new Error('Account is deactivated');
 
     const ok = await bcrypt.compare(password, user.password);
-    if (!ok) throw new Error('Invalid email or password');
+    if (!ok) {
+      this.notifications.add(user.id, 'error', 'auth', 'Failed login attempt — wrong password');
+      throw new Error('Invalid email or password');
+    }
 
     // Strip password before storing in session
     const safeUser = { ...user, password: '' };
     sessionStorage.setItem('currentUser', JSON.stringify(safeUser));
     this._currentUser.set(safeUser);
+
+    // Load notification history then record the successful login
+    await this.notifications.loadForUser(user.id);
+    this.notifications.add(user.id, 'success', 'auth', `Signed in as ${user.fullName}`);
   }
 
   logout(): void {
     sessionStorage.removeItem('currentUser');
     this._currentUser.set(null);
+    this.notifications.clear();
     this.router.navigate(['/login']);
   }
 

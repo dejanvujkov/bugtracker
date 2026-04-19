@@ -16,7 +16,7 @@ export async function runSeed(driver: SqliteDriver): Promise<void> {
   const hash = await bcrypt.hash(SUPERUSER_PASSWORD, 10);
   const now = new Date().toISOString();
 
-  driver.run(
+  await driver.run(
     `INSERT INTO users (id, email, password, full_name, role, is_active, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [uuidv4(), SUPERUSER_EMAIL, hash, 'Super Admin', 'superuser', 1, now, now]

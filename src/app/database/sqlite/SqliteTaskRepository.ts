@@ -137,7 +137,7 @@ export class SqliteTaskRepository implements ITaskRepository {
     const current = await this.findById(id);
     if (!current) return null;
     const now = new Date().toISOString();
-    this.driver.run(
+    await this.driver.run(
       `UPDATE tasks SET status = ?, updated_at = ? WHERE id = ?`,
       [status, now, id]
     );
@@ -145,12 +145,15 @@ export class SqliteTaskRepository implements ITaskRepository {
   }
 
   async reorderColumn(projectId: string, status: TaskStatus, orderedIds: string[]): Promise<void> {
-    orderedIds.forEach((id, index) => {
-      this.driver.run(
-        `UPDATE tasks SET position = ?, updated_at = ? WHERE id = ? AND project_id = ? AND status = ?`,
-        [index, new Date().toISOString(), id, projectId, status]
-      );
-    });
+    const now = new Date().toISOString();
+    await Promise.all(
+      orderedIds.map((id, index) =>
+        this.driver.run(
+          `UPDATE tasks SET position = ?, updated_at = ? WHERE id = ? AND project_id = ? AND status = ?`,
+          [index, now, id, projectId, status]
+        )
+      )
+    );
   }
 
   async allChildrenClosed(epicId: string): Promise<boolean> {
@@ -176,7 +179,7 @@ export class SqliteTaskRepository implements ITaskRepository {
     );
     const position = dto.position ?? ((posRows[0]?.max_pos ?? -1) + 1);
 
-    this.driver.run(
+    await this.driver.run(
       `INSERT INTO tasks (id, project_id, epic_id, title, description, status, is_epic, assignee_id, position, created_by, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
@@ -201,7 +204,7 @@ export class SqliteTaskRepository implements ITaskRepository {
     const current = await this.findById(id);
     if (!current) return null;
     const now = new Date().toISOString();
-    this.driver.run(
+    await this.driver.run(
       `UPDATE tasks SET
          epic_id = ?, title = ?, description = ?, status = ?,
          assignee_id = ?, position = ?, updated_at = ?
@@ -223,7 +226,7 @@ export class SqliteTaskRepository implements ITaskRepository {
   async delete(id: string): Promise<boolean> {
     const current = await this.findById(id);
     if (!current) return false;
-    this.driver.run(`DELETE FROM tasks WHERE id = ?`, [id]);
+    await this.driver.run(`DELETE FROM tasks WHERE id = ?`, [id]);
     return true;
   }
 }

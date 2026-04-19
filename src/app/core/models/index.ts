@@ -1,4 +1,6 @@
 export type UserRole = 'superuser' | 'project_admin' | 'member';
+export type NotificationType = 'success' | 'error' | 'info';
+export type NotificationCategory = 'auth' | 'user' | 'project' | 'task' | 'comment';
 export type ProjectRole = 'project_admin' | 'member';
 export type TaskStatus = 'open' | 'active' | 'closed';
 
@@ -125,4 +127,22 @@ export interface CreateCommentDTO {
 
 export interface UpdateCommentDTO {
   body?: string;
+}
+
+export interface AppNotification {
+  id: string;
+  userId: string;
+  type: NotificationType;
+  category: NotificationCategory;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface CreateNotificationDTO {
+  id: string;
+  userId: string;
+  type: NotificationType;
+  category: NotificationCategory;
+  message: string;
 }

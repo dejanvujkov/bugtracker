@@ -66,7 +66,7 @@ export class SqliteCommentRepository implements ICommentRepository {
   async create(dto: CreateCommentDTO): Promise<Comment> {
     const now = new Date().toISOString();
     const id = dto.id || uuidv4();
-    this.driver.run(
+    await this.driver.run(
       `INSERT INTO comments (id, task_id, author_id, body, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [id, dto.taskId, dto.authorId, dto.body, now, now]
@@ -78,7 +78,7 @@ export class SqliteCommentRepository implements ICommentRepository {
     const current = await this.findById(id);
     if (!current) return null;
     const now = new Date().toISOString();
-    this.driver.run(
+    await this.driver.run(
       `UPDATE comments SET body = ?, updated_at = ? WHERE id = ?`,
       [dto.body ?? current.body, now, id]
     );
@@ -88,7 +88,7 @@ export class SqliteCommentRepository implements ICommentRepository {
   async delete(id: string): Promise<boolean> {
     const current = await this.findById(id);
     if (!current) return false;
-    this.driver.run(`DELETE FROM comments WHERE id = ?`, [id]);
+    await this.driver.run(`DELETE FROM comments WHERE id = ?`, [id]);
     return true;
   }
 }

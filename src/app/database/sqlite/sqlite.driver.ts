@@ -35,31 +35,32 @@ export class SqliteDriver {
     });
   }
 
-  run(sql: string, params: (string | number | null | boolean)[] = []): void {
+  async run(sql: string, params: (string | number | null | boolean)[] = []): Promise<void> {
     this.db.run(sql, params.map(p => typeof p === 'boolean' ? (p ? 1 : 0) : p));
-    this.persist();
+    await this.persist();
   }
 
-  exec(sql: string): void {
+  async exec(sql: string): Promise<void> {
     this.db.exec(sql);
-    this.persist();
+    await this.persist();
   }
 
   /** Serialize DB to OPFS for persistence */
   async persist(): Promise<void> {
+    const data = this.db.export();
     try {
-      const data = this.db.export();
       const root = await navigator.storage.getDirectory();
       const fh = await root.getFileHandle('bugtracker.db', { create: true });
       const writable = await (fh as any).createWritable();
       await writable.write(data);
       await writable.close();
-    } catch (err) {
+    } catch {
       // Fallback to localStorage for browsers without OPFS
       try {
-        const data = this.db.export();
-        const base64 = btoa(String.fromCharCode(...data));
-        localStorage.setItem('bugtracker_db', base64);
+        // Avoid spread operator — it overflows the call stack for large Uint8Arrays
+        let binary = '';
+        for (let i = 0; i < data.length; i++) binary += String.fromCharCode(data[i]);
+        localStorage.setItem('bugtracker_db', btoa(binary));
       } catch {
         console.warn('Could not persist database');
       }

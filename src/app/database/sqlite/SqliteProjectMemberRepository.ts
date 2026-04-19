@@ -33,7 +33,7 @@ export class SqliteProjectMemberRepository implements IProjectMemberRepository {
 
   async addMember(projectId: string, userId: string, role: ProjectRole): Promise<ProjectMember> {
     const now = new Date().toISOString();
-    this.driver.run(
+    await this.driver.run(
       `INSERT OR REPLACE INTO project_members (project_id, user_id, role, joined_at)
        VALUES (?, ?, ?, ?)`,
       [projectId, userId, role, now]
@@ -44,7 +44,7 @@ export class SqliteProjectMemberRepository implements IProjectMemberRepository {
   async removeMember(projectId: string, userId: string): Promise<boolean> {
     const existing = await this.getMembership(projectId, userId);
     if (!existing) return false;
-    this.driver.run(
+    await this.driver.run(
       `DELETE FROM project_members WHERE project_id = ? AND user_id = ?`,
       [projectId, userId]
     );
@@ -54,7 +54,7 @@ export class SqliteProjectMemberRepository implements IProjectMemberRepository {
   async updateRole(projectId: string, userId: string, role: ProjectRole): Promise<ProjectMember | null> {
     const existing = await this.getMembership(projectId, userId);
     if (!existing) return null;
-    this.driver.run(
+    await this.driver.run(
       `UPDATE project_members SET role = ? WHERE project_id = ? AND user_id = ?`,
       [role, projectId, userId]
     );

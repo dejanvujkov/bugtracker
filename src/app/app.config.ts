@@ -16,7 +16,7 @@ import { createRepositories, REPOS } from './database/repository-factory';
 function initDatabase(driver: SqliteDriver) {
   return async () => {
     await driver.init();
-    runMigrations(driver);
+    await runMigrations(driver);
     await runSeed(driver);
   };
 }

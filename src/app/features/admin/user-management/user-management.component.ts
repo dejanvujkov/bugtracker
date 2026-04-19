@@ -13,7 +13,9 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { UserService } from '../../../core/services/user.service';
-import { User, UserRole } from '../../../core/models';
+import { AuthService } from '../../../core/services/auth.service';
+import { ProjectService } from '../../../core/services/project.service';
+import { User, UserRole, Project } from '../../../core/models';
 import { AvatarComponent } from '../../../shared/components/avatar/avatar.component';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog.component';
 
@@ -63,6 +65,17 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
               </mat-slide-toggle>
             </td>
           </ng-container>
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let u">
+              <button mat-icon-button color="warn"
+                matTooltip="Delete user"
+                [disabled]="u.role === 'superuser' || u.id === currentUser()?.id"
+                (click)="deleteUser(u)">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </td>
+          </ng-container>
           <tr mat-header-row *matHeaderRowDef="columns"></tr>
           <tr mat-row *matRowDef="let row; columns: columns;" [class.inactive-row]="!row.isActive"></tr>
         </table>
@@ -86,15 +99,27 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
           </mat-form-field>
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>Role</mat-label>
-            <mat-select [(ngModel)]="newRole">
+            <mat-select [(ngModel)]="newRole" (ngModelChange)="onRoleChange()">
               <mat-option value="member">Member</mat-option>
               <mat-option value="project_admin">Project Admin</mat-option>
             </mat-select>
           </mat-form-field>
+          @if (newRole === 'project_admin') {
+            <mat-form-field appearance="outline" class="full-width" floatLabel="always">
+              <mat-label>Project <span class="required-mark">*</span></mat-label>
+              <mat-select [(ngModel)]="newProjectId">
+                <mat-option value="">— Select project —</mat-option>
+                @for (p of projects(); track p.id) {
+                  <mat-option [value]="p.id">{{ p.name }}</mat-option>
+                }
+              </mat-select>
+              <mat-hint>The project this admin will manage</mat-hint>
+            </mat-form-field>
+          }
           @if (createError()) {
             <div class="error-msg">{{ createError() }}</div>
           }
-          <button mat-flat-button color="primary" class="full-width" (click)="createUser()">Create User</button>
+          <button mat-flat-button color="primary" class="full-width create-btn" (click)="createUser()">Create User</button>
         </div>
       </div>
     </div>
@@ -115,20 +140,27 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
     .user-email { font-size: 12px; color: #605e5c; }
     .inactive-row { opacity: 0.5; }
     .error-msg { color: #d83b01; font-size: 13px; }
+    .required-mark { color: #d83b01; }
+    .create-btn { margin-top: 8px; }
   `]
 })
 export class UserManagementComponent implements OnInit {
   private userService = inject(UserService);
+  private projectService = inject(ProjectService);
+  private auth = inject(AuthService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
 
   users = signal<User[]>([]);
-  columns = ['user', 'role', 'status'];
+  projects = signal<Project[]>([]);
+  currentUser = this.auth.currentUser;
+  columns = ['user', 'role', 'status', 'actions'];
 
   newName = '';
   newEmail = '';
   newPassword = '';
   newRole: UserRole = 'member';
+  newProjectId = '';
   createError = signal('');
 
   async ngOnInit(): Promise<void> {
@@ -136,7 +168,17 @@ export class UserManagementComponent implements OnInit {
   }
 
   async load(): Promise<void> {
-    this.users.set(await this.userService.getAll());
+    const [users, projects] = await Promise.all([
+      this.userService.getAll(),
+      this.projectService.getAll(),
+    ]);
+    this.users.set(users);
+    this.projects.set(projects);
+  }
+
+  onRoleChange(): void {
+    this.newProjectId = '';
+    this.createError.set('');
   }
 
   async changeRole(user: User, role: UserRole): Promise<void> {
@@ -155,16 +197,50 @@ export class UserManagementComponent implements OnInit {
     await this.load();
   }
 
+  deleteUser(user: User): void {
+    const ref = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Delete User',
+        message: `Permanently delete "${user.fullName}"? This action cannot be undone.`,
+        confirmLabel: 'Delete',
+        danger: true,
+      }
+    });
+    ref.afterClosed().subscribe(async (confirmed: boolean) => {
+      if (!confirmed) return;
+      const result = await this.userService.deleteUser(user.id);
+      if (result.success) {
+        this.snackBar.open('User deleted', 'OK', { duration: 2000 });
+        await this.load();
+      } else {
+        this.snackBar.open(result.error ?? 'Failed to delete user', 'Dismiss', { duration: 4000 });
+      }
+    });
+  }
+
   async createUser(): Promise<void> {
     this.createError.set('');
     if (!this.newName || !this.newEmail || !this.newPassword) {
       this.createError.set('All fields are required');
       return;
     }
+    if (this.newRole === 'project_admin' && !this.newProjectId) {
+      this.createError.set('Please select a project for the project admin');
+      return;
+    }
     try {
-      await this.userService.create({ fullName: this.newName, email: this.newEmail, password: this.newPassword, role: this.newRole });
+      const user = await this.userService.create({
+        fullName: this.newName,
+        email: this.newEmail,
+        password: this.newPassword,
+        role: this.newRole,
+      });
+      if (this.newRole === 'project_admin' && this.newProjectId) {
+        await this.projectService.addMember(this.newProjectId, user.id, 'project_admin');
+      }
       this.newName = this.newEmail = this.newPassword = '';
       this.newRole = 'member';
+      this.newProjectId = '';
       this.snackBar.open('User created', 'OK', { duration: 2000 });
       await this.load();
     } catch (e: any) {

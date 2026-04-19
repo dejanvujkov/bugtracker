@@ -102,9 +102,14 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let m">
-              <button mat-icon-button color="warn" matTooltip="Remove" (click)="removeMember(m)">
+              <button mat-icon-button color="warn" matTooltip="Remove from project" (click)="removeMember(m)">
                 <mat-icon>person_remove</mat-icon>
               </button>
+              @if (auth.isSuperuser() || (auth.isAdmin() && m.user?.role === 'member')) {
+                <button mat-icon-button color="warn" matTooltip="Delete user account" (click)="deleteUser(m)">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              }
             </td>
           </ng-container>
           <tr mat-header-row *matHeaderRowDef="memberColumns"></tr>
@@ -222,6 +227,27 @@ export class ProjectSettingsComponent implements OnInit {
   async changeRole(member: ProjectMember, role: ProjectRole): Promise<void> {
     await this.projectService.updateMemberRole(this.projectId, member.userId, role);
     this.snackBar.open('Role updated', 'OK', { duration: 2000 });
+  }
+
+  deleteUser(member: ProjectMember): void {
+    const ref = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Delete User',
+        message: `Permanently delete "${member.user?.fullName}"? This action cannot be undone.`,
+        confirmLabel: 'Delete',
+        danger: true,
+      }
+    });
+    ref.afterClosed().subscribe(async (confirmed: boolean) => {
+      if (!confirmed) return;
+      const result = await this.userService.deleteUser(member.userId, this.projectId);
+      if (result.success) {
+        this.snackBar.open('User deleted', 'OK', { duration: 2000 });
+        await this.load();
+      } else {
+        this.snackBar.open(result.error ?? 'Failed to delete user', 'Dismiss', { duration: 4000 });
+      }
+    });
   }
 
   removeMember(member: ProjectMember): void {

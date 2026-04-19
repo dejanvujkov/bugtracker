@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { v4 as uuidv4 } from 'uuid';
 import { REPOS } from '../../database/repository-factory';
 import { AuthService } from './auth.service';
+import { NotificationService } from './notification.service';
 import { Task, CreateTaskDTO, UpdateTaskDTO, TaskStatus, BoardData } from '../models';
 
 export class EpicHasOpenChildrenError extends Error {
@@ -14,6 +15,7 @@ export class EpicHasOpenChildrenError extends Error {
 export class TaskService {
   private repos = inject(REPOS);
   private auth = inject(AuthService);
+  private notifications = inject(NotificationService);
 
   async getBoardData(projectId: string, epicId?: string): Promise<BoardData> {
     return this.repos.tasks.getBoardData(projectId, epicId);
@@ -33,18 +35,26 @@ export class TaskService {
 
   async create(dto: Omit<CreateTaskDTO, 'id' | 'createdBy'>): Promise<Task> {
     const user = this.auth.currentUser()!;
-    return this.repos.tasks.create({
-      ...dto,
-      id: uuidv4(),
-      createdBy: user.id,
-    });
+    try {
+      const task = await this.repos.tasks.create({ ...dto, id: uuidv4(), createdBy: user.id });
+      const kind = task.isEpic ? 'Epic' : 'Task';
+      this.notifications.add(user.id, 'success', 'task', `${kind} "${task.title}" created`);
+      return task;
+    } catch (e: any) {
+      this.notifications.add(user.id, 'error', 'task', `Failed to create task: ${e.message}`);
+      throw e;
+    }
   }
 
   async update(id: string, dto: UpdateTaskDTO): Promise<Task | null> {
-    return this.repos.tasks.update(id, dto);
+    const uid = this.auth.currentUser()?.id ?? '';
+    const task = await this.repos.tasks.update(id, dto);
+    if (task) this.notifications.add(uid, 'info', 'task', `Task "${task.title}" updated`);
+    return task;
   }
 
   async changeStatus(taskId: string, newStatus: TaskStatus): Promise<Task> {
+    const uid = this.auth.currentUser()?.id ?? '';
     const task = await this.repos.tasks.findById(taskId);
     if (!task) throw new Error('Task not found');
 
@@ -54,6 +64,7 @@ export class TaskService {
     }
 
     const updated = await this.repos.tasks.updateStatus(taskId, newStatus);
+    this.notifications.add(uid, 'info', 'task', `"${task.title}" moved to ${newStatus}`);
     return updated!;
   }
 
@@ -62,6 +73,10 @@ export class TaskService {
   }
 
   async delete(id: string): Promise<boolean> {
-    return this.repos.tasks.delete(id);
+    const uid = this.auth.currentUser()?.id ?? '';
+    const task = await this.repos.tasks.findById(id);
+    const result = await this.repos.tasks.delete(id);
+    if (result) this.notifications.add(uid, 'info', 'task', `Task "${task?.title}" deleted`);
+    return result;
   }
 }

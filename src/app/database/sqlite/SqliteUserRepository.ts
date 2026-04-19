@@ -52,7 +52,7 @@ export class SqliteUserRepository implements IUserRepository {
   async create(dto: CreateUserDTO): Promise<User> {
     const now = new Date().toISOString();
     const id = dto.id || uuidv4();
-    this.driver.run(
+    await this.driver.run(
       `INSERT INTO users (id, email, password, full_name, role, is_active, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, dto.email, dto.password, dto.fullName, dto.role, dto.isActive !== false ? 1 : 0, now, now]
@@ -64,7 +64,7 @@ export class SqliteUserRepository implements IUserRepository {
     const current = await this.findById(id);
     if (!current) return null;
     const now = new Date().toISOString();
-    this.driver.run(
+    await this.driver.run(
       `UPDATE users SET
          email = ?, password = ?, full_name = ?, role = ?, is_active = ?, updated_at = ?
        WHERE id = ?`,
@@ -84,7 +84,36 @@ export class SqliteUserRepository implements IUserRepository {
   async delete(id: string): Promise<boolean> {
     const current = await this.findById(id);
     if (!current) return false;
-    this.driver.run(`UPDATE users SET is_active = 0 WHERE id = ?`, [id]);
+    await this.driver.run(`UPDATE users SET is_active = 0 WHERE id = ?`, [id]);
     return true;
+  }
+
+  async hardDelete(id: string): Promise<{ success: boolean; error?: string }> {
+    const current = await this.findById(id);
+    if (!current) return { success: false, error: 'User not found' };
+
+    const projects = this.driver.query<{ count: number }>(
+      `SELECT COUNT(*) as count FROM projects WHERE created_by = ?`, [id]
+    );
+    if (projects[0].count > 0) {
+      return { success: false, error: 'Cannot delete a user who has created projects' };
+    }
+
+    const tasks = this.driver.query<{ count: number }>(
+      `SELECT COUNT(*) as count FROM tasks WHERE created_by = ?`, [id]
+    );
+    if (tasks[0].count > 0) {
+      return { success: false, error: 'Cannot delete a user who has created tasks' };
+    }
+
+    const comments = this.driver.query<{ count: number }>(
+      `SELECT COUNT(*) as count FROM comments WHERE author_id = ?`, [id]
+    );
+    if (comments[0].count > 0) {
+      return { success: false, error: 'Cannot delete a user who has authored comments' };
+    }
+
+    await this.driver.run(`DELETE FROM users WHERE id = ?`, [id]);
+    return { success: true };
   }
 }

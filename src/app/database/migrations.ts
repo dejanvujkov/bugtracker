@@ -1,7 +1,7 @@
 import { SqliteDriver } from './sqlite/sqlite.driver';
 
-export function runMigrations(driver: SqliteDriver): void {
-  driver.exec(`
+export async function runMigrations(driver: SqliteDriver): Promise<void> {
+  await driver.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id          TEXT PRIMARY KEY,
       email       TEXT NOT NULL UNIQUE,
@@ -62,5 +62,17 @@ export function runMigrations(driver: SqliteDriver): void {
     );
 
     CREATE INDEX IF NOT EXISTS idx_comments_task_id ON comments(task_id);
+
+    CREATE TABLE IF NOT EXISTS notifications (
+      id          TEXT PRIMARY KEY,
+      user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      type        TEXT NOT NULL CHECK(type IN ('success', 'error', 'info')),
+      category    TEXT NOT NULL,
+      message     TEXT NOT NULL,
+      is_read     INTEGER NOT NULL DEFAULT 0,
+      created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, created_at DESC);
   `);
 }
